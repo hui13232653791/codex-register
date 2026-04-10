@@ -1,4 +1,7 @@
 // @ts-nocheck
+const RECENT_LOCAL_PARTS = new Set();
+let localCounter = 0;
+
 function randomLowercaseString(minLength, maxLength = minLength) {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   const size =
@@ -24,6 +27,50 @@ function randomInt(min, max) {
 
 function maybe(value, probability = 0.5) {
   return Math.random() < probability ? value : "";
+}
+
+function nextEntropyToken() {
+  localCounter = (localCounter + 1) % 1679616;
+  const timePart = Date.now().toString(36).slice(-4);
+  const counterPart = localCounter.toString(36).padStart(2, "0");
+  const randomPart = randomLowercaseString(2, 3);
+  return `${timePart}${counterPart}${randomPart}`;
+}
+
+function normalizeLocalPart(value) {
+  return String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "")
+    .replace(/[._-]{2,}/g, (match) => match[0])
+    .replace(/^[._-]+|[._-]+$/g, "");
+}
+
+function finalizeLocalPart(baseValue) {
+  let base = normalizeLocalPart(baseValue);
+  if (base.length < 5) {
+    base += randomLowercaseString(2, 4);
+  }
+
+  const entropy = nextEntropyToken();
+  const separator = /[a-z0-9]$/.test(base) ? randomPick(["", "_", "-"]) : "";
+  const maxBaseLength = 30 - entropy.length - separator.length;
+  base = base.slice(0, Math.max(8, maxBaseLength)).replace(/[._-]+$/g, "");
+
+  let candidate = `${base}${separator}${entropy}`;
+  candidate = normalizeLocalPart(candidate).slice(0, 30).replace(/[._-]+$/g, "");
+
+  while (!candidate || RECENT_LOCAL_PARTS.has(candidate)) {
+    const extraEntropy = nextEntropyToken().slice(-4);
+    const trimmedBase = base.slice(0, Math.max(5, 30 - extraEntropy.length - 1)).replace(/[._-]+$/g, "");
+    candidate = `${trimmedBase}_${extraEntropy}`.slice(0, 30).replace(/[._-]+$/g, "");
+  }
+
+  RECENT_LOCAL_PARTS.add(candidate);
+  if (RECENT_LOCAL_PARTS.size > 20000) {
+    const oldest = RECENT_LOCAL_PARTS.values().next().value;
+    RECENT_LOCAL_PARTS.delete(oldest);
+  }
+  return candidate;
 }
 
 export function generateEmailName() {
@@ -80,20 +127,9 @@ export function generateEmailName() {
     () => `${randomPick(names)}${randomPick(separators)}${randomPick(adjectives)}${maybe(randomPick([currentYearTail, `${randomInt(7, 98)}`]), 0.5)}`,
     () => `${randomPick(names)}${maybe(randomPick([".", "_", "-"]) + randomPick(surnames), 0.6)}${maybe(`${randomInt(10, 999)}`, 0.4)}`,
     () => `${randomPick(adjectives)}${randomPick(nouns)}${maybe(`${randomInt(1, 99)}`, 0.35)}`,
+    () => `${randomPick(names)}${randomPick(separators)}${randomPick(surnames)}${randomPick(separators)}${randomPick(nouns)}`,
+    () => `${randomPick(adjectives)}${randomPick(separators)}${randomPick(names)}${randomPick(separators)}${randomPick(suffixWords)}`,
   ];
 
-  let localPart = randomPick(builders)().toLowerCase();
-  localPart = localPart
-    .replace(/[^a-z0-9._-]+/g, "")
-    .replace(/[._-]{2,}/g, (match) => match[0])
-    .replace(/^[._-]+|[._-]+$/g, "");
-
-  if (localPart.length < 5) {
-    localPart += randomLowercaseString(2, 4);
-  }
-  if (localPart.length > 22) {
-    localPart = localPart.slice(0, 22).replace(/[._-]+$/g, "");
-  }
-
-  return localPart;
+  return finalizeLocalPart(randomPick(builders)());
 }

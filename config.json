@@ -1,6 +1,6 @@
 {
   "provider": "proxiedmail",
-  "defaultProxyUrl": "http://127.0.0.1:10808",
+  "defaultProxyUrl": "http://127.0.0.1:1088",
   "defaultPassword": "kuaileshifu88",
   "loopDelayMs": 120000,
   "failureDelayMs": 120000,

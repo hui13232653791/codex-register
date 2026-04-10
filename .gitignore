@@ -2,3 +2,4 @@
 auth
 dist
 node_modules
+*.json
