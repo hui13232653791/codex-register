@@ -1,0 +1,11 @@
+{
+  "provider": "proxiedmail",
+  "defaultProxyUrl": "http://127.0.0.1:10808",
+  "defaultPassword": "kuaileshifu88",
+  "loopDelayMs": 120000,
+  "failureDelayMs": 120000,
+  "gmailAccessToken": "",
+  "gmailEmailAddress": "",
+  "2925EmailAddress": "",
+  "2925Password": ""
+}
